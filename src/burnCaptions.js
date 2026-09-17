@@ -34,7 +34,11 @@ export function burnCaptions({ videoPath, cues, outDir, outputPath, logoPath }) 
 // name or 0xRRGGBB hex value.
 const BANNER_BG_COLOR = process.env.BANNER_BG_COLOR || "0xFF7A1A"; // brand orange
 const BANNER_LOGO_WIDTH = 480;
-const BANNER_PADDING = 30; // px above/below the logo, inside the orange band
+const BANNER_PADDING = 30; // px above the logo, and below the subtitle, inside the band
+const SUBTITLE_TEXT = "Warehouse Management System";
+const SUBTITLE_FONT_SIZE = 24;
+const SUBTITLE_GAP = 14; // px between the bottom of the logo and the subtitle text
+const SUBTITLE_FONT_FILE = process.env.CAPTION_FONT_FILE || "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
 
 function overlayLogo({ videoPath, logoPath }) {
   const dir = path.dirname(videoPath);
@@ -42,11 +46,14 @@ function overlayLogo({ videoPath, logoPath }) {
 
   // Actual pixel dimensions of assets/payrecon-logo.png (2898x585) used to
   // compute the scaled logo's real height, so the orange band is sized
-  // exactly around it rather than guessed.
+  // exactly around it (and the subtitle beneath it) rather than guessed.
   const LOGO_NATIVE_WIDTH = 2898;
   const LOGO_NATIVE_HEIGHT = 585;
   const scaledLogoHeight = Math.round((LOGO_NATIVE_HEIGHT / LOGO_NATIVE_WIDTH) * BANNER_LOGO_WIDTH);
-  const bandHeight = scaledLogoHeight + BANNER_PADDING * 2;
+  const bandHeight =
+    BANNER_PADDING + scaledLogoHeight + SUBTITLE_GAP + SUBTITLE_FONT_SIZE + BANNER_PADDING;
+
+  const escapedFont = SUBTITLE_FONT_FILE.replace(/\\/g, "/").replace(/:/g, "\\:");
 
   execFileSync(
     "ffmpeg",
@@ -57,7 +64,9 @@ function overlayLogo({ videoPath, logoPath }) {
       "-filter_complex",
       `[0:v]drawbox=x=0:y=0:w=iw:h=${bandHeight}:color=${BANNER_BG_COLOR}:t=fill[boxed];` +
       `[1:v]scale=${BANNER_LOGO_WIDTH}:-1[logo];` +
-      `[boxed][logo]overlay=(main_w-overlay_w)/2:${BANNER_PADDING}`,
+      `[boxed][logo]overlay=(main_w-overlay_w)/2:${BANNER_PADDING}[withlogo];` +
+      `[withlogo]drawtext=fontfile='${escapedFont}':text='${SUBTITLE_TEXT}':fontsize=${SUBTITLE_FONT_SIZE}:` +
+      `fontcolor=white:x=(w-text_w)/2:y=${BANNER_PADDING + scaledLogoHeight + SUBTITLE_GAP}`,
       "-c:a", "copy",
       withLogoPath,
     ],
