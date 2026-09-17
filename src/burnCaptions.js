@@ -36,7 +36,7 @@ const BANNER_BG_COLOR = process.env.BANNER_BG_COLOR || "0xFF7A1A"; // brand oran
 const BANNER_LOGO_WIDTH = 480;
 const BANNER_PADDING = 30; // px above the logo, and below the subtitle, inside the band
 const SUBTITLE_TEXT = "Warehouse Management System";
-const SUBTITLE_FONT_SIZE = 34;
+const SUBTITLE_FONT_SIZE = 45;
 const SUBTITLE_GAP = 14; // px between the bottom of the logo and the subtitle text
 const SUBTITLE_FONT_FILE = process.env.CAPTION_FONT_FILE || "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
 
