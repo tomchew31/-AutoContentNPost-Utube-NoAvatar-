@@ -56,8 +56,13 @@ function overlayLogo({ videoPath, logoPath }) {
 const CANVAS_WIDTH = 1080;
 const FONT_SIZE = 44;
 const LINE_SPACING = 10;
-const BOTTOM_MARGIN_PX = 60; // distance from the very bottom edge, in real pixels
 const MAX_TEXT_WIDTH = 950;   // leaves ~65px margin on each side
+// Bold sans-serif font file for drawtext (drawtext has no "bold" flag —
+// weight comes entirely from which font file you point it at). DejaVu Sans
+// Bold ships via the fonts-dejavu-core apt package, installed alongside
+// ffmpeg in the workflow. Override with a different bold .ttf path if you'd
+// rather match a specific brand font.
+const FONT_FILE = process.env.CAPTION_FONT_FILE || "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf";
 
 function burnCaptionsOnly({ videoPath, cues, outDir, outputPath }) {
   if (!cues || cues.length === 0) {
@@ -81,18 +86,18 @@ function burnCaptionsOnly({ videoPath, cues, outDir, outputPath }) {
     const cueFile = path.join(cueDir, `cue-${i + 1}.txt`);
     fs.writeFileSync(cueFile, wrapped);
 
-    // y positions the TOP of the text block such that its BOTTOM line sits
-    // BOTTOM_MARGIN_PX above the frame's bottom edge, regardless of how
+    // y centers the text block vertically in the frame, regardless of how
     // many lines this particular cue wraps into.
     const blockHeight = lineCount * (FONT_SIZE + LINE_SPACING);
-    const y = `h-${BOTTOM_MARGIN_PX}-${blockHeight}`;
+    const y = `(h-${blockHeight})/2`;
 
     // Escape the textfile path for ffmpeg's filter parser (colons are a
     // filter-option separator; unlikely in a Linux path here, but safe).
     const escapedPath = cueFile.replace(/\\/g, "/").replace(/:/g, "\\:");
+    const escapedFontFile = FONT_FILE.replace(/\\/g, "/").replace(/:/g, "\\:");
 
     return (
-      `drawtext=textfile='${escapedPath}':fontsize=${FONT_SIZE}:fontcolor=white:` +
+      `drawtext=fontfile='${escapedFontFile}':textfile='${escapedPath}':fontsize=${FONT_SIZE}:fontcolor=white:` +
       `borderw=3:bordercolor=black:line_spacing=${LINE_SPACING}:` +
       `x=(w-text_w)/2:y=${y}:enable='between(t,${cue.start.toFixed(2)},${cue.end.toFixed(2)})'`
     );
