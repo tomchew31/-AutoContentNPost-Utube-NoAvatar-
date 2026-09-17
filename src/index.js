@@ -2,7 +2,7 @@ import "dotenv/config";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { pickTopic } from "./pickTopic.js";
+import { pickTrendingTopic } from "./pickTrendingTopic.js";
 import { research } from "./research.js";
 import { generateScript, generateLinkedInPost } from "./generateScript.js";
 import { renderVoiceVideo } from "./voiceRender.js";
@@ -21,7 +21,7 @@ const ENDING_PATH = path.join(__dirname, "../assets/ending.mp4");
 const DRY_RUN = process.env.DRY_RUN === "true";
 
 async function main() {
-  const topic = pickTopic();
+  const topic = await pickTrendingTopic();
   console.log(`[1/9] Topic: ${topic}`);
 
   const points = await research(topic);
