@@ -1,0 +1,15 @@
+{
+  "name": "auto-content-utube-noavatar",
+  "version": "1.0.0",
+  "description": "HeyGen-free daily pipeline: research -> script -> edge-tts voice -> ffmpeg video -> YouTube upload",
+  "main": "src/pipeline.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/pipeline.js"
+  },
+  "dependencies": {
+    "msedge-tts": "^1.4.0",
+    "googleapis": "^140.0.0",
+    "dotenv": "^16.4.5"
+  }
+}
