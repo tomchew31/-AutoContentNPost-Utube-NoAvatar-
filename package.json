@@ -1,15 +1,20 @@
 {
-  "name": "auto-content-utube-noavatar",
+  "name": "payrecon-video-pipeline",
   "version": "1.0.0",
-  "description": "HeyGen-free daily pipeline: research -> script -> edge-tts voice -> ffmpeg video -> YouTube upload",
-  "main": "src/pipeline.js",
+  "description": "Daily automated research -> script -> edge-tts narration video -> YouTube (+ LinkedIn) publishing pipeline for PayRecon",
   "type": "module",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node src/pipeline.js"
+    "start": "node src/index.js",
+    "dry-run": "DRY_RUN=true node src/index.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "googleapis": "^144.0.0",
     "msedge-tts": "^1.4.0",
-    "googleapis": "^140.0.0",
     "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

@@ -1,0 +1,132 @@
+import { execFileSync } from "child_process";
+import fs from "fs";
+import path from "path";
+
+/**
+ * Overlays the logo, then burns in captions using drawtext (not the
+ * "subtitles"/libass filter). This is a deliberate switch: the libass
+ * approach went through many rounds of FontSize/MarginV tuning that
+ * repeatedly failed to produce consistent, predictable results (identical
+ * values sometimes rendering completely differently), likely due to
+ * ASS "script resolution" scaling ambiguity that proved hard to pin down.
+ * drawtext uses plain pixel coordinates and the same enable='between(t,...)'
+ * timing technique already proven reliable for the scene-image cutaways —
+ * much easier to reason about.
+ *
+ * Each cue's text is written to its own small .txt file and referenced via
+ * drawtext's textfile= option, rather than embedded inline in the filter
+ * string — this sidesteps the notoriously fiddly quote-escaping needed for
+ * natural-language sentences (apostrophes in "here's", "don't", etc.)
+ * inside an inline text= value.
+ */
+export function burnCaptions({ videoPath, cues, outDir, outputPath, logoPath }) {
+  const workingVideo = logoPath
+    ? overlayLogo({ videoPath, logoPath })
+    : videoPath;
+
+  burnCaptionsOnly({ videoPath: workingVideo, cues, outDir, outputPath });
+
+  return outputPath;
+}
+
+function overlayLogo({ videoPath, logoPath }) {
+  const dir = path.dirname(videoPath);
+  const withLogoPath = path.join(dir, "video-with-logo.mp4");
+
+  execFileSync(
+    "ffmpeg",
+    [
+      "-y",
+      "-i", videoPath,
+      "-i", logoPath,
+      // Logo scaled to 480px wide (~44% of a 1080px-wide canvas), centered
+      // horizontally, 40px from the top. Adjust "480" or "40" to
+      // resize/reposition it.
+      "-filter_complex", "[1:v]scale=480:-1[logo];[0:v][logo]overlay=(main_w-overlay_w)/2:40",
+      "-c:a", "copy",
+      withLogoPath,
+    ],
+    { stdio: "inherit" }
+  );
+
+  return withLogoPath;
+}
+
+// Real pixel values now — no more ASS "script resolution" ambiguity.
+const CANVAS_WIDTH = 1080;
+const FONT_SIZE = 44;
+const LINE_SPACING = 10;
+const BOTTOM_MARGIN_PX = 60; // distance from the very bottom edge, in real pixels
+const MAX_TEXT_WIDTH = 950;   // leaves ~65px margin on each side
+
+function burnCaptionsOnly({ videoPath, cues, outDir, outputPath }) {
+  if (!cues || cues.length === 0) {
+    execFileSync("ffmpeg", ["-y", "-i", videoPath, "-c", "copy", outputPath], {
+      stdio: "inherit",
+    });
+    return;
+  }
+
+  const cueDir = path.join(outDir, "caption-cues");
+  fs.mkdirSync(cueDir, { recursive: true });
+
+  // Rough heuristic: average character width ≈ FONT_SIZE * 0.55 for a
+  // typical sans-serif font. Good enough to avoid overflowing the frame
+  // without needing to actually measure rendered text width.
+  const charsPerLine = Math.floor(MAX_TEXT_WIDTH / (FONT_SIZE * 0.55));
+
+  const drawtextFilters = cues.map((cue, i) => {
+    const wrapped = wrapText(cue.text, charsPerLine);
+    const lineCount = wrapped.split("\n").length;
+    const cueFile = path.join(cueDir, `cue-${i + 1}.txt`);
+    fs.writeFileSync(cueFile, wrapped);
+
+    // y positions the TOP of the text block such that its BOTTOM line sits
+    // BOTTOM_MARGIN_PX above the frame's bottom edge, regardless of how
+    // many lines this particular cue wraps into.
+    const blockHeight = lineCount * (FONT_SIZE + LINE_SPACING);
+    const y = `h-${BOTTOM_MARGIN_PX}-${blockHeight}`;
+
+    // Escape the textfile path for ffmpeg's filter parser (colons are a
+    // filter-option separator; unlikely in a Linux path here, but safe).
+    const escapedPath = cueFile.replace(/\\/g, "/").replace(/:/g, "\\:");
+
+    return (
+      `drawtext=textfile='${escapedPath}':fontsize=${FONT_SIZE}:fontcolor=white:` +
+      `borderw=3:bordercolor=black:line_spacing=${LINE_SPACING}:` +
+      `x=(w-text_w)/2:y=${y}:enable='between(t,${cue.start.toFixed(2)},${cue.end.toFixed(2)})'`
+    );
+  });
+
+  execFileSync(
+    "ffmpeg",
+    [
+      "-y",
+      "-i", videoPath,
+      "-vf", drawtextFilters.join(","),
+      "-c:a", "copy",
+      outputPath,
+    ],
+    { stdio: "inherit" }
+  );
+}
+
+/** Greedy word-wrap into lines of at most `maxChars` characters. */
+function wrapText(text, maxChars) {
+  const words = text.split(/\s+/);
+  const lines = [];
+  let current = "";
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+
+  return lines.join("\n");
+}

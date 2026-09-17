@@ -1,0 +1,43 @@
+name: Daily Voice Video + LinkedIn Post
+
+on:
+  # Native GitHub schedule intentionally disabled — cron-job.org (external)
+  # is the sole trigger now, to avoid double-firing and duplicate posts.
+  # See README for the cron-job.org setup.
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - run: npm install
+
+      - run: npm start
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TTS_VOICE: ${{ vars.TTS_VOICE }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          YOUTUBE_PUBLISH_STATUS: "private"
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_AUTHOR_URN: ${{ secrets.LINKEDIN_AUTHOR_URN }}
+
+      # Keep the generated script/post text as a downloadable artifact
+      # even on days you're reviewing before it goes public.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: daily-output-${{ github.run_number }}
+          path: output/
+          retention-days: 14
