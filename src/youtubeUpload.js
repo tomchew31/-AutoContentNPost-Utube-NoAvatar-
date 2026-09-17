@@ -36,6 +36,38 @@ export async function uploadCaptions({ videoId, srtContent }) {
 }
 
 /**
+ * Sets a custom thumbnail on an existing video.
+ * https://developers.google.com/youtube/v3/docs/thumbnails/set
+ *
+ * NOTE: custom thumbnails require the uploading channel to have a verified
+ * phone number on the Google account (a YouTube platform requirement, not
+ * an API limitation) — if that's not done, this call fails with a 403 and
+ * YouTube just uses its own auto-picked frame instead, which index.js
+ * treats as non-fatal.
+ */
+export async function setThumbnail({ videoId, thumbnailPath }) {
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.YOUTUBE_CLIENT_ID,
+    process.env.YOUTUBE_CLIENT_SECRET
+  );
+  oauth2Client.setCredentials({
+    refresh_token: process.env.YOUTUBE_REFRESH_TOKEN,
+  });
+
+  const youtube = google.youtube({ version: "v3", auth: oauth2Client });
+
+  const res = await youtube.thumbnails.set({
+    videoId,
+    media: {
+      mimeType: "image/jpeg",
+      body: fs.createReadStream(thumbnailPath),
+    },
+  });
+
+  return res.data;
+}
+
+/**
  * Uploads a finished video to YouTube as a Short/video.
  *
  * Requires a one-time OAuth setup (see README) to obtain a refresh token

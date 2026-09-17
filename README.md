@@ -6,13 +6,15 @@ YouTube. Also generates a companion LinkedIn post from the same research
 (optional auto-post, or copy/paste manually).
 
 ```
-pickTopic → research (Claude + web search) → generateScript / generateLinkedInPost
+pickTrendingTopic (Claude + web search) → research (Claude + web search) → generateScript / generateLinkedInPost
           → renderVoiceVideo (edge-tts)     → uploadToYouTube
                                              → postToLinkedIn (optional)
 ```
 
-Same shape as your SEO article pipeline: Node.js + GitHub Actions, deterministic
-day-of-year topic rotation, credentials as GitHub Secrets.
+Same shape as your SEO article pipeline: Node.js + GitHub Actions, credentials
+as GitHub Secrets. Topic selection checks current Southeast Asia search
+trends (via Claude + web search) instead of a plain rotation, falling back
+to day-of-year rotation through `data/topics.json` if that search fails.
 
 ## 1. Install
 
@@ -147,9 +149,11 @@ for reference):
 - **Rate limits / cost**: edge-tts is free; YouTube's daily upload quota is
   generous for 1 video/day but check your Google Cloud quota if you ever
   batch-upload.
-- **Distinct topics**: `pickTopic.js` uses the same day-of-year modulo pattern
-  as your SEO pipeline. If you want the video topic to never match the same
-  day's blog topic, offset the index (e.g. `dayOfYear + 7`).
+- **Distinct topics**: `pickTrendingTopic.js` picks based on current SEA
+  search trends, falling back to `pickTopic.js`'s day-of-year modulo
+  pattern (same as your SEO pipeline) if the trend search fails. If you
+  want the video topic to never match the same day's blog topic on a
+  fallback day, offset the index in `pickTopic.js` (e.g. `dayOfYear + 7`).
 - **LinkedIn video**: this version posts LinkedIn as text only. Native video
   upload to LinkedIn is possible via their Video API but needs additional
   product approval — worth adding later if text-only underperforms.

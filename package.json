@@ -12,6 +12,7 @@
     "@anthropic-ai/sdk": "^0.32.0",
     "googleapis": "^144.0.0",
     "msedge-tts": "^2.0.7",
+    "node-fetch": "^3.3.2",
     "dotenv": "^16.4.5"
   },
   "engines": {
