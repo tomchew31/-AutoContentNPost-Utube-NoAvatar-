@@ -18,23 +18,25 @@ import path from "path";
  */
 export async function renderVoiceVideo(script, { outputPath }) {
   const outDir = path.dirname(outputPath);
-  const audioPath = path.join(outDir, "narration.mp3");
-
-  await generateNarration(script, audioPath);
+  const audioPath = await generateNarration(script, outDir);
   const duration = getAudioDuration(audioPath);
   buildVideoFromAudio({ audioPath, duration, outputPath });
 
   return { outputPath, duration };
 }
 
-async function generateNarration(script, audioPath) {
+async function generateNarration(script, outDir) {
   const voice = process.env.TTS_VOICE || "en-US-GuyNeural";
   const tts = new MsEdgeTTS();
   await tts.setMetadata(voice, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-  await tts.toFile(audioPath, script, {
+  // v2 API: toFile(dirPath, input, options) writes its own auto-named file
+  // inside dirPath and returns the real path — it does NOT accept a full
+  // file path as the first argument (that was the v1 signature).
+  const { audioFilePath } = await tts.toFile(outDir, script, {
     rate: process.env.TTS_RATE || "+0%",
     pitch: process.env.TTS_PITCH || "+0Hz",
   });
+  return audioFilePath;
 }
 
 function getAudioDuration(audioPath) {
