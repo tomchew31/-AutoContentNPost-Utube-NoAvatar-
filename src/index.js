@@ -23,11 +23,7 @@ const DRY_RUN = process.env.DRY_RUN === "true";
 
 async function main() {
   const topic = await pickTrendingTopic();
-<<<<<<< HEAD
   console.log(`[1/10] Topic: ${topic}`);
-=======
-  console.log(`[1/9] Topic: ${topic}`);
->>>>>>> 25fcf7761af7800202c10067c5d6cab0b223e825
 
   const points = await research(topic);
   console.log(`[2/10] Research points:\n${points.map((p) => `  - ${p}`).join("\n")}`);
