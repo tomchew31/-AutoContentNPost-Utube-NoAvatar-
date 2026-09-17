@@ -29,9 +29,24 @@ export function burnCaptions({ videoPath, cues, outDir, outputPath, logoPath }) 
   return outputPath;
 }
 
+// Top banner band settings — override via env if you want a different
+// color/size without editing code. BANNER_BG_COLOR accepts any ffmpeg color
+// name or 0xRRGGBB hex value.
+const BANNER_BG_COLOR = process.env.BANNER_BG_COLOR || "0xFF7A1A"; // brand orange
+const BANNER_LOGO_WIDTH = 480;
+const BANNER_PADDING = 30; // px above/below the logo, inside the orange band
+
 function overlayLogo({ videoPath, logoPath }) {
   const dir = path.dirname(videoPath);
   const withLogoPath = path.join(dir, "video-with-logo.mp4");
+
+  // Actual pixel dimensions of assets/payrecon-logo.png (2898x585) used to
+  // compute the scaled logo's real height, so the orange band is sized
+  // exactly around it rather than guessed.
+  const LOGO_NATIVE_WIDTH = 2898;
+  const LOGO_NATIVE_HEIGHT = 585;
+  const scaledLogoHeight = Math.round((LOGO_NATIVE_HEIGHT / LOGO_NATIVE_WIDTH) * BANNER_LOGO_WIDTH);
+  const bandHeight = scaledLogoHeight + BANNER_PADDING * 2;
 
   execFileSync(
     "ffmpeg",
@@ -39,10 +54,10 @@ function overlayLogo({ videoPath, logoPath }) {
       "-y",
       "-i", videoPath,
       "-i", logoPath,
-      // Logo scaled to 480px wide (~44% of a 1080px-wide canvas), centered
-      // horizontally, 40px from the top. Adjust "480" or "40" to
-      // resize/reposition it.
-      "-filter_complex", "[1:v]scale=480:-1[logo];[0:v][logo]overlay=(main_w-overlay_w)/2:40",
+      "-filter_complex",
+      `[0:v]drawbox=x=0:y=0:w=iw:h=${bandHeight}:color=${BANNER_BG_COLOR}:t=fill[boxed];` +
+      `[1:v]scale=${BANNER_LOGO_WIDTH}:-1[logo];` +
+      `[boxed][logo]overlay=(main_w-overlay_w)/2:${BANNER_PADDING}`,
       "-c:a", "copy",
       withLogoPath,
     ],
