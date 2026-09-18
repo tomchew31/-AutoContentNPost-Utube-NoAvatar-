@@ -21,9 +21,30 @@ const ENDING_PATH = path.join(__dirname, "../assets/ending.mp4");
 
 const DRY_RUN = process.env.DRY_RUN === "true";
 
+const HISTORY_PATH = path.join(__dirname, "../data/topic-history.json");
+const MAX_HISTORY_ENTRIES = 30; // keep the file small — pickTrendingTopic.js only reads the last 10 anyway
+
+function recordTopicHistory(topic) {
+  try {
+    let history = [];
+    if (fs.existsSync(HISTORY_PATH)) {
+      history = JSON.parse(fs.readFileSync(HISTORY_PATH, "utf-8"));
+    }
+    history.push({ topic, date: new Date().toISOString().slice(0, 10) });
+    if (history.length > MAX_HISTORY_ENTRIES) {
+      history = history.slice(-MAX_HISTORY_ENTRIES);
+    }
+    fs.writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2));
+  } catch (err) {
+    // Never let history tracking break the actual run
+    console.error("      (non-fatal) Failed to record topic history:", err.message);
+  }
+}
+
 async function main() {
   const topic = await pickTrendingTopic();
   console.log(`[1/10] Topic: ${topic}`);
+  recordTopicHistory(topic);
 
   const points = await research(topic);
   console.log(`[2/10] Research points:\n${points.map((p) => `  - ${p}`).join("\n")}`);
