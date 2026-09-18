@@ -10,6 +10,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write # needed to commit data/topic-history.json back after each run
     steps:
       - uses: actions/checkout@v4
 
@@ -32,6 +34,18 @@ jobs:
           YOUTUBE_PUBLISH_STATUS: "private"
           LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
           LINKEDIN_AUTHOR_URN: ${{ secrets.LINKEDIN_AUTHOR_URN }}
+
+      # Commit the updated topic-history.json back so tomorrow's run knows
+      # what's already been covered recently. Non-fatal if there's nothing
+      # to commit (e.g. the run failed before picking a topic).
+      - name: Save topic history
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/topic-history.json
+          git diff --staged --quiet || git commit -m "Update topic history [skip ci]"
+          git push || echo "Nothing to push"
 
       # Keep the generated script/post text as a downloadable artifact
       # even on days you're reviewing before it goes public.
